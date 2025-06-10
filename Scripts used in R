@@ -1,0 +1,387 @@
+#Script to obtain different plots:
+
+#######Admixture-barplot, k2-k4########
+par(mfrow =c(1,3))
+
+##K=2
+K_two_incl <- read.table("I_H_E_DP3_GQ20_NM_NI_BA_miss20_maf0.02_missi_LD_pruned_V2.2.Q")
+mergedAdmixtureTable_k2 = cbind(K_two_incl, individuals)
+ordered_k2 = mergedAdmixtureTable_k2[order(mergedAdmixtureTable_k2$V1),]
+colnames(ordered_k2) <- c("k1","k2","ind", "fam", "father","mother","sex","pop", "lat", "long", "group")
+rownames(ordered_k2) <- ordered_k2$ind
+par(mar = c(3, 6, 2, 2))
+k2_order_of_ind <- ordered_k2$ind
+my_colors = c("k1" = "#A3D5EB","k2" = "#50B97D")
+barplot(t(as.matrix(subset(ordered_k2, select=k1:k2))) ,horiz = TRUE, cex.names = 0.8, cex.axis = 0.8, col=my_colors, border=NA, las=2, names.arg=ordered_k2$Pop, main = "Admixture, k=2")
+k2_order_of_ind
+
+##K=3
+K_three_incl <- read.table("I_H_E_DP3_GQ20_NM_NI_BA_miss20_maf0.02_missi_LD_pruned_V2.3.Q")
+str(K_three_incl)
+mergedAdmixtureTable_k3 = cbind(K_three_incl, individuals)
+ordered_k3 = mergedAdmixtureTable_k3[order(mergedAdmixtureTable_k3$V1,mergedAdmixtureTable_k3$V2),]
+colnames(ordered_k3) <- c("k1","k2","k3","ind", "fam", "father","mother","sex","pop", "lat", "long", "group")
+rownames(ordered_k3) <- ordered_k3$ind
+par(mar = c(3, 5, 2, 2))
+k3_order_of_ind <- ordered_k3[match(k2_order_of_ind, ordered_k3$ind),]
+my_colors2 = c("k2" = "#50B97D","k1" = "#A3D5EB","k3" = "#4A90E2")
+barplot(t(as.matrix(subset(k3_order_of_ind, select=k1:k3))),horiz = TRUE, cex.names = 0.8, cex.axis = 0.8, col=my_colors2, border=NA, las=2, names.arg=ordered_k2$Pop, main = "Admixture, k=3")
+
+##K=4
+K_four_incl <- read.table("I_H_E_DP3_GQ20_NM_NI_BA_miss20_maf0.02_missi_LD_pruned_V2.4.Q")
+str(K_four_incl)
+mergedAdmixtureTable_k4 = cbind(K_four_incl, individuals)
+ordered_k4 = mergedAdmixtureTable_k4[order(mergedAdmixtureTable_k4$V1,mergedAdmixtureTable_k4$V2,mergedAdmixtureTable_k4$V3),]
+colnames(ordered_k4) <- c("k1","k2","k3","k4","ind", "fam", "father","mother","sex","pop", "group")
+rownames(ordered_k4) <- ordered_k4$ind
+par(mar = c(3, 5, 2, 2))
+k4_order_of_ind <- ordered_k4[match(k2_order_of_ind, ordered_k4$ind),]
+my_colors3 = c("k2" = "#50B97D","k1" = "#A3D5EB","k3" = "#4A90E2", "k4" = "#CAEAD8")
+barplot(t(as.matrix(subset(k4_order_of_ind, select=k1:k4))),horiz = TRUE, cex.names = 0.8, cex.axis = 0.8, col = my_colors3, border=NA, las=2, names.arg=ordered_k2$Pop, main = "Admixture, k=4")
+
+#######Admixture map#######
+mp <- NULL
+mapWorld <- borders("world", colour="grey70", fill="grey70") # create a layer of borders
+mp <- ggplot() + mapWorld + theme_light()
+mp <- mp + geom_sf() +
+  coord_sf(xlim = c(4, 15), ylim = c(57, 68), expand = FALSE) +
+  geom_scatterpie(aes(x=long, y=lat, r=0.25), data=ordered_k2, cols=c("k1", "k2") ,col=NA)
+mp <- mp + scale_fill_manual(values = my_colors, name = "K Values") 
+
+#######Admixture map with bioclim 1 and 12#######
+bio <- worldclim_global(var = "bio", res = 0.5, path = getwd()) #Istalling bioclim data
+clim1 <- raster("wc2.1_30s_bio_1.tif")
+clim12 <- raster("wc2.1_30s_bio_12.tif")
+ROI <- rnaturalearth::ne_countries(country = "norway", returnclass = "sf")
+rasdf <- as.data.frame(clim1, xy = TRUE)%>%drop_na()
+rasdf12 <- as.data.frame(clim12, xy = TRUE)%>%drop_na()
+# Define the extent of Norway
+norway_extent <- extent(4, 15, 57, 68)
+
+# Extract raster values within Norway extent
+norway_raster <- crop(clim1, norway_extent)
+
+# Convert raster to dataframe
+norway_raster_df <- as.data.frame(norway_raster, xy = TRUE) %>% drop_na()
+
+
+# Calculate the minimum and maximum values of the raster data within Norway
+norway_min <- min(norway_raster_df)
+norway_max <- max(norway_raster_df)
+
+# Define custom breaks and labels for the color scale
+breaks <- seq(0, 20, by = 5)  # Custom breaks
+labels <- breaks  # Labels same as breaks
+
+#import the admixturedata
+individuals <- read.csv("pedind_v3.csv", header = TRUE)
+K_two_incl <- read.table("I_H_E_DP3_GQ20_NM_NI_BA_miss20_maf0.02_missi_LD_pruned_V2.2.Q")
+mergedAdmixtureTable_k2 = cbind(K_two_incl, individuals)
+ordered_k2 = mergedAdmixtureTable_k2[order(mergedAdmixtureTable_k2$V1),]
+colnames(ordered_k2) <- c("k1","k2","ind", "fam", "father","mother","sex","pop", "lat", "long", "group")
+Population <- individuals$group
+
+
+ggplot() +
+  # Raster background
+  geom_raster(data = norway_raster_df, aes(x = x, y = y, fill = wc2.1_30s_bio_1)) + #fill = bioclim-data
+  scale_fill_viridis(option = "B",name = "Annual Mean Temperature", direction = -1)+ #Option B for bioclim1 and E for bioclim 12
+  
+  # Add a new fill scale before the pie charts
+  ggnewscale::new_scale_fill() +
+  
+  # Scatterpie with separate fill scale
+  geom_scatterpie(
+    aes(x = long, y = lat, r = 0.20),
+    data = ordered_k2,
+    cols = c("k1", "k2"),
+    color = NA
+  ) +
+  scale_fill_manual(values = c("k1" = "#A3D5EB","k2" = "#50B97D"), name = "Group", labels = c("k1" = "atlantic", "k2" = "boreal")) +
+  
+  # Borders and cropping
+  geom_sf(data = ROI, fill = "transparent", color = "black") +
+  coord_sf(xlim = c(4, 15), ylim = c(57, 68), expand = FALSE, crs = st_crs(ROI)) +
+  theme(aspect.ratio = 1) +# optional but sometimes helps
+
+  #add label on axis
+  labs(x = "Long", y = "Lat")
+  
+  #coord_sf(xlim = c(4, 15), ylim = c(57, 68)) +
+  
+  # Theme tweaks
+  theme(
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank()
+  )
+
+
+
+#######PCA#######
+evec1.pc <- round(eval[1,1]/sum(eval)*100,digits=2) #take eigenvalue 1, divide by sum of all eigenvalues, multiply by 100 for %.
+evec2.pc <- round(eval[2,1]/sum(eval)*100,digits=2)
+evec3.pc <- round(eval[3,1]/sum(eval)*100,digits=2)
+evec4.pc <- round(eval[4,1]/sum(eval)*100,digits=2)
+
+##PC1 with PC2
+ggplot(evec, aes(V2,V3)) + 
+  geom_point(aes(colour = group, , size = 1)) + 
+  scale_color_manual(values = c("atlantic" = "#A3D5EB", "boreal" = "#50B97D", "admixed" = "#DCC7A1")) + 
+  guides(size = "none") +
+  scale_x_continuous(limits = c(-0.5, 0.5)) +
+  scale_y_continuous(limits = c(-0.5, 0.5)) +
+  xlab(paste("PC1 (",evec1.pc,  " % of observed genetic variation)")) + ylab(paste("PC2 (",evec2.pc, " % of observed genetic variation)")) +
+  theme(legend.text = element_text(size = 14), legend.title = element_text(size = 16)) +
+  guides(color = guide_legend(override.aes = list(size = 3))) 
+ 
+##PC1 with PC3 
+  ggplot(evec, aes(V2,V4)) + 
+  geom_point(aes(colour = group, , size = 1)) + 
+  scale_color_manual(values = c("atlantic" = "#A3D5EB", "boreal" = "#50B97D", "admixed" = "#DCC7A1")) + 
+  guides(size = "none") +
+  scale_x_continuous(limits = c(-0.5, 0.5)) +
+  scale_y_continuous(limits = c(-0.5, 0.5)) +
+  xlab(paste("PC1 (",evec1.pc,  " % of observed genetic variation)")) + ylab(paste("PC3 (",evec3.pc, " % of observed genetic variation)")) +
+  theme(legend.text = element_text(size = 14), legend.title = element_text(size = 16)) +
+  guides(color = guide_legend(override.aes = list(size = 3))) 
+  
+ ##PC1 with PC4
+ ggplot(evec, aes(V2,V5)) + 
+  geom_point(aes(colour = group, , size = 1)) + 
+  scale_color_manual(values = c("atlantic" = "#A3D5EB", "boreal" = "#50B97D", "admixed" = "#DCC7A1")) + 
+  guides(size = "none") +
+  scale_x_continuous(limits = c(-0.8, 0.8)) +
+  scale_y_continuous(limits = c(-0.8, 0.8)) +
+  xlab(paste("PC1 (",evec1.pc,  " % of observed genetic variation)")) + ylab(paste("PC4 (",evec4.pc, " % of observed genetic variation)")) +
+  theme(legend.text = element_text(size = 14), legend.title = element_text(size = 16)) +
+  guides(color = guide_legend(override.aes = list(size = 3))) 
+
+
+#######LD decay#######
+rm(list = ls())
+
+library(tidyverse)
+
+
+path_a <- "./atlantic_ld_decay_mean.ld_decay_bins"
+atlantic_bins <- read_tsv(path_a)
+
+path_ad <- "./admixed_ld_decay_mean.ld_decay_bins"
+path_b <- "./boreal_ld_decay_mean.ld_decay_bins"
+
+admixed_bins <- read_tsv(path_ad)
+boreal_bins <- read_tsv(path_b)
+
+#Admixed mean across all scaffolds
+ld_bins_admixed.avg <- admixed_bins %>%
+  group_by(distance) %>%
+  summarise(across(-chr, mean))
+str(ld_bins_admixed.avg)
+ld_bins_admixed.avg$Group <- "Admixed"
+
+#boreal mena across all scaffolds
+ld_bins_boreal.avg <- boreal_bins %>%
+  group_by(distance) %>%
+  summarise(across(-chr, mean))
+str(ld_bins_boreal.avg)
+ld_bins_boreal.avg$Group <- "Boreal"
+
+#atlantic mean across all scaffolds
+ld_bins_atlantic.avg <- atlantic_bins %>%
+  group_by(distance) %>%
+  summarise(across(-chr, mean))
+str(ld_bins_atlantic.avg)
+ld_bins_atlantic.avg$Group <- "Atlantic"
+
+my_colors = c("Atlantic" = "#A3D5EB", "Boreal" = "#50B97D", "Admixed" = "#DCC7A1")
+
+all_bins <- rbind(ld_bins_admixed.avg,ld_bins_atlantic.avg,ld_bins_boreal.avg)
+
+ggplot(all_bins, aes(distance, avg_R2, colour = Group)) + geom_line(size = 0.8) +
+  xlab("Distance (bp)") + ylab(expression(italic(r)^2)) +
+  scale_color_manual(values = c("Atlantic" = "#A3D5EB", "Boreal" = "#50B97D", "Admixed" = "#DCC7A1"))
+
+#######Divergence and differentiation#######
+library(tidyverse)
+library(gridExtra)
+library(RColorBrewer)
+library(gridExtra)
+library(ggbeeswarm)
+
+windows <- read.csv("fst_pi_dxy_v3.csv", header = T)
+
+head(windows)
+windows
+# change scaffold names
+windows$scaffold <- as.factor(windows$scaffold)
+levels(windows$scaffold)
+
+levels(windows$scaffold) <- c("Scaffold 1","Scaffold 2", "Scaffold 3", "Scaffold 4", "Scaffold 5",
+                        "Scaffold 6", "Scaffold 7", "Scaffold 8", "Scaffold 9", "Scaffold 10", "Scaffold 11", "Scaffold 12")
+
+# Change order of scaffold names
+windows$scaffold <- factor(windows$scaffold, levels = c("Scaffold 1", "Scaffold 2", "Scaffold 3", "Scaffold 4", "Scaffold 5",
+                                            "Scaffold 6", "Scaffold 7", "Scaffold 8", "Scaffold 9","Scaffold 10", 
+                                            "Scaffold 11", "Scaffold 12"))
+
+windows$position_kbp <- windows$mid/1000
+##FST 
+
+quants <- quantile(windows$Fst_atlantic_boreal, c(0.975, 0.995), na.rm = T)
+
+                              "11", "12")
+ggplot(windows, aes(mid, Fst_atlantic_boreal, colour = scaffold)) +
+  geom_point(size = 1.5) +
+  scale_y_continuous(limits = c(0,1), expand = c(0,0)) +
+  #scale_colour_brewer(palette = "Dark2") +
+  #scale_colour_manual(values = rep(c("#B2182B", "#2166AC"), 14)) +
+  scale_colour_manual(values = rep(c("darkgrey", "black"), 12)) +
+  labs(y = "Fst", x = "Scaffold") +
+  geom_hline(yintercept = quantsab, colour = "red", linewidth = 0.8) +
+  theme_light() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        panel.spacing.x = unit(0,"line"), 
+        panel.border = element_blank(),
+        text = element_text(size = 16),
+        legend.position = "none") +
+  facet_grid(cols = vars(scaffold), scales = "free", switch = "both") 
+
+mean(windows$Fst_atlantic_boreal, na.rm = TRUE)
+
+
+#######Local Ancestry#######
+library(ggbio)
+library(GenomicRanges)
+
+##AdmC:
+#Combine all samples in dataframe:
+TA_1216_7_M1 <- read.table("TA-1216-7-M1.viterbi")
+TA_1216_7_M1$sample <- "TA_1216_7_M1"
+TA_1216_7_M1$tract.length <- TA_1216_7_M1$V3 - TA_1216_7_M1$V2
+
+TA_1217_5_M1 <- read.table("TA-1217-5-M1.viterbi")
+TA_1217_5_M1$sample <- "TA_1217_5_M1"
+TA_1217_5_M1$tract.length <- TA_1217_5_M1$V3 - TA_1217_5_M1$V2
+
+TA_1219_4_M1 <- read.table("TA-1219-4-M1.viterbi")
+TA_1219_4_M1$sample <- "TA_1219_4_M1"
+TA_1219_4_M1$tract.length <- TA_1219_4_M1$V3 - TA_1219_4_M1$V2
+
+TA_1222_1_M1 <- read.table("TA-1222-1-M1.viterbi")
+TA_1222_1_M1$sample <- "TA_1222_1_M1"
+TA_1222_1_M1$tract.length <- TA_1222_1_M1$V3 - TA_1222_1_M1$V2
+
+TA_1223_1_M1 <- read.table("TA-1223-1-M1.viterbi")
+TA_1223_1_M1$sample <- "TA_1223_1_M1"
+TA_1223_1_M1$tract.length <- TA_1223_1_M1$V3 - TA_1223_1_M1$V2
+
+TA_1226_5_M3 <- read.table("TA-1226-5-M3.viterbi")
+TA_1226_5_M3$sample <- "TA_1226_5_M3"
+TA_1226_5_M3$tract.length <- TA_1226_5_M3$V3 - TA_1226_5_M3$V2
+
+TA_1228_3_M1 <- read.table("TA-1228-3-M1.viterbi")
+TA_1228_3_M1$sample <- "TA_1228_3_M1"
+TA_1228_3_M1$tract.length <- TA_1228_3_M1$V3 - TA_1228_3_M1$V2
+
+TA_1233_5_M3 <- read.table("TA-1233-5-M3.viterbi")
+TA_1233_5_M3$sample <- "TA_1233_5_M3"
+TA_1233_5_M3$tract.length <- TA_1233_5_M3$V3 - TA_1233_5_M3$V2
+
+TA_1235_3_M2 <- read.table("TA-1235-3-M2.viterbi")
+TA_1235_3_M2$sample <- "TA_1235_3_M2"
+TA_1235_3_M2$tract.length <- TA_1235_3_M2$V3 - TA_1235_3_M2$V2
+
+TA_1237_1_M2 <- read.table("TA-1237-1-M2.viterbi")
+TA_1237_1_M2$sample <- "TA_1237_1_M2"
+TA_1237_1_M2$tract.length <- TA_1237_1_M2$V3 - TA_1237_1_M2$V2
+
+TA_1245_8_M1 <- read.table("TA-1245-8-M1.viterbi")
+TA_1245_8_M1$sample <- "TA_1245_8_M1"
+TA_1245_8_M1$tract.length <- TA_1245_8_M1$V3 - TA_1245_8_M1$V2
+
+
+admC <- rbind(TA_1216_7_M1, 
+              TA_1217_5_M1, 
+              TA_1219_4_M1, 
+              TA_1222_1_M1, 
+              TA_1223_1_M1, 
+              TA_1226_5_M3, 
+              TA_1228_3_M1, 
+              TA_1233_5_M3, 
+              TA_1235_3_M2, 
+              TA_1237_1_M2, 
+              TA_1245_8_M1)
+
+str(admC)
+boxplot(admC$tract.length ~ admC$sample)
+par(mfrow=c(1,1))
+head(admC)
+#plot local ancestry along chromosome:
+admC$V1 <- as.factor(admC$V1)
+
+levels(admC$V1) <- c("Scaffold 1","Scaffold 2", "Scaffold 3", "Scaffold 4", "Scaffold 5",
+                     "Scaffold 6", "Scaffold 7", "Scaffold 8", "Scaffold 9", "Scaffold 10", "Scaffold 11", "Scaffold 12")
+
+
+segments <- GRanges(seqnames = admC$V1,
+                    ranges = IRanges(start = admC$V2,
+                                     end = admC$V3),
+                    ancestry = admC$V6,
+                    sample = admC$sample
+)
+library(gtools)
+
+colnames(admC) <- c("chr", "start", "end", "prob1", "prob2", "ancestry", "sample", "length")
+
+ancestry_df <- admC
+# --- Sort scaffolds naturally
+scaffold_order <- mixedsort(unique(ancestry_df$chr))
+ancestry_df$chr <- factor(ancestry_df$chr, levels = scaffold_order)
+
+# --- Compute scaffold lengths
+scaffold_lengths <- ancestry_df %>%
+  group_by(chr) %>%
+  summarise(length = max(end), .groups = "drop")
+# --- Create cumulative scaffold start positions to "concatenate" scaffolds end-to-end
+scaffold_lengths <- scaffold_lengths %>%
+  arrange(factor(chr, levels = scaffold_order)) %>%
+  mutate(cum_start = lag(cumsum(length), default = 0))
+# --- Join cumulative starts back to ancestry_df
+ancestry_df <- ancestry_df %>%
+  left_join(scaffold_lengths %>% select(chr, cum_start), by = "chr") %>%
+  mutate(
+    plot_start = start + cum_start,
+    plot_end = end + cum_start
+  )
+# --- Prepare vertical lines for scaffold boundaries
+boundaries <- scaffold_lengths %>%
+  mutate(boundary = cum_start) %>%
+  select(boundary)
+# Also add final scaffold end boundary:
+total_length <- sum(scaffold_lengths$length)
+boundaries <- bind_rows(boundaries, tibble(boundary = total_length))
+# --- Plot with ggplot2
+ggplot(ancestry_df, aes(y = sample)) +
+  geom_segment(aes(x = plot_start, xend = plot_end, yend = sample, color = ancestry), size = 18) +
+  geom_vline(data = boundaries, aes(xintercept = boundary), linetype = "dashed", color = "black") +
+  scale_color_manual(name = "Ancestry",
+                     values = c("1,0" = "#A3D5EB", "0,1" = "#50B97D", "1,1" = "green", "0,0" = "gray"),
+                     labels = c("0,1" = "Boreal", "1,0" = "Atlantic")) +
+  scale_x_continuous(
+    name = "Position along concatenated scaffolds",
+    breaks = scaffold_lengths$cum_start + scaffold_lengths$length / 2,
+    labels = scaffold_lengths$chr,
+    expand = c(0,0)
+  ) +
+  ylab("Sample") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
+    axis.text.y = element_text(size = 12),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    legend.text = element_text(size = 14), legend.title = element_text(size = 16),
+    panel.grid.major.x = element_blank()
+  ) 
