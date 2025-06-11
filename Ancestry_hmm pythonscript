@@ -1,0 +1,50 @@
+import argparse
+import gzip
+import csv
+
+### get sample to population mappings
+sample2pop = {}
+with open( "popfile_v3.txt") as file :
+    for line in file :
+        (key, val) = line.split()
+        sample2pop[key] = val
+#print(sample2pop)
+#for key, value in sample2pop.items():
+    #print(key, ' : ', value)
+
+### IDs
+sample_fields = []
+
+### keep track of where we are on the chromosome
+last_position = -10000000
+current_chrom = "NA"
+
+### have we printed the ploidy file yet
+ploidy_print = 0
+
+min_total = 1
+min_diff = 0.01
+r = 1e-7
+ahmm_ploidy = "ploidy.txt"
+#g=1 for genotypes g=anything else for read counts
+g = 0
+
+with open( "ALL_illumina1_hardfilter_exclude_DP3_GQ20_nomono_noindel_biallelic_miss20.vcf" ) as tsv :
+    ### split on tab
+    for line in csv.reader(tsv, delimiter="\t") :
+        #print(line)
+        ### parse the header line
+        if ( line[0].startswith('#CHROM') ) :
+            ### get our info
+            sample_files = line
+            continue
+                ### skip lines that start with ##
+        if ( line[0].startswith('##') ) :
+            continue
+        ### remove sites that are not biallelic snps
+        #if ( len(line[3]) != 1 or len(line[4]) != 1 ) :
+            #continue
+                ### now read the line and decide what to do with it
+        if ( current_chrom != line[0] ) :
+            current_chrom = line[0]
+            last_position 
